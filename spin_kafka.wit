@@ -1,0 +1,16 @@
+record message {
+    offset: u64,
+    key: string,
+    value: string
+}
+
+variant error {
+    other(string),
+}
+
+enum message-action {
+    commit,
+    leave
+}
+
+handle-message: func(message: message) -> expected<message-action, error>
