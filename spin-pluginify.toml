@@ -1,0 +1,5 @@
+name = "trigger-kafka"
+version = "0.1"
+spin_compatibility = ">=0.10.0"
+license = "Apache-2.0"
+package = "./target/release/trigger-kafka"
