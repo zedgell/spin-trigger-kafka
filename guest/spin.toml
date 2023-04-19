@@ -1,0 +1,17 @@
+spin_version = "1"
+authors = ["zedgell <zachary@edgelldevelopment.com>"]
+description = ""
+name = "goodbye"
+trigger = { type = "kafka" }
+version = "0.1.0"
+
+[[component]]
+id = "zedgell"
+source = "target/wasm32-wasi/release/guest.wasm"
+[component.trigger]
+broker_urls="localhost:9092"
+topic="spin"
+group="test-spin"
+offset="Latest"
+[component.build]
+command = "cargo build --target wasm32-wasi --release"
