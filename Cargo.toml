@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-kafka = {version="0.9.0", default-features=false, features=["snappy", "gzip"]}
+kafka = "0.9.0"
 spin-core = { git = "https://github.com/fermyon/spin", tag = "v0.10.0" }
 spin-trigger = { git = "https://github.com/fermyon/spin", tag = "v0.10.0" }
 tokio = { version = "1.11", features = [ "full" ] }
