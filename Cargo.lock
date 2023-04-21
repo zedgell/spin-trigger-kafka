@@ -1795,8 +1795,6 @@ dependencies = [
  "crc",
  "flate2",
  "fnv",
- "openssl",
- "openssl-sys",
  "ref_slice",
  "snap",
  "thiserror",

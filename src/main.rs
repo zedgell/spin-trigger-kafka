@@ -1,6 +1,7 @@
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use clap::Parser;
+use futures::future;
 use is_terminal::IsTerminal;
 use kafka::client::GroupOffsetStorage;
 use kafka::consumer::{Consumer, FetchOffset};
@@ -118,19 +119,19 @@ impl TriggerExecutor for KafkaTrigger {
         let mut handlers = vec![];
         for component in self.kafka_components {
             let engine_clone = engine.clone();
-            handlers.push(tokio::spawn(async move {
-                Self::start_listener(engine_clone, component)
-            }))
+            handlers.push(Self::start_listener(engine_clone, component))
         }
-
-        let _ = futures::future::join_all(handlers);
+        future::try_join_all(handlers).await?;
 
         Ok(())
     }
 }
 
 impl KafkaTrigger {
-    async fn start_listener(engine: Arc<TriggerAppEngine<Self>>, component: Component) {
+    async fn start_listener(
+        engine: Arc<TriggerAppEngine<Self>>,
+        component: Component,
+    ) -> Result<()> {
         let con = Arc::new(Mutex::new(
             Consumer::from_hosts(
                 component
