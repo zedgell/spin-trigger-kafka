@@ -74,18 +74,6 @@ impl FromStr for Offset {
     }
 }
 
-// This is a placeholder - we don't yet detect any situations that would require
-// graceful or ungraceful exit.  It will likely require rework when we do.  It
-// is here so that we have a skeleton for returning errors that doesn't expose
-// us to thoughtlessly "?"-ing away an Err case and creating a situation where a
-// transient failure could end the trigger.
-#[allow(dead_code)]
-#[derive(Debug)]
-enum TerminationReason {
-    ExitRequested,
-    Other(String),
-}
-
 #[async_trait]
 impl TriggerExecutor for KafkaTrigger {
     const TRIGGER_TYPE: &'static str = "kafka";
