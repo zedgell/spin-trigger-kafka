@@ -3,8 +3,9 @@ use async_trait::async_trait;
 use clap::Parser;
 use futures::future;
 use is_terminal::IsTerminal;
-use kafka::client::GroupOffsetStorage;
+use kafka::client::{GroupOffsetStorage, SecurityConfig};
 use kafka::consumer::{Consumer, FetchOffset};
+use openssl::ssl::{SslConnector, SslFiletype, SslMethod, SslVerifyMode};
 use serde::{Deserialize, Serialize};
 use spin_kafka::SpinKafkaData;
 use spin_trigger::{
@@ -45,6 +46,8 @@ pub struct KafkaTriggerConfig {
     pub topic: String,
     pub group: String,
     pub offset: String,
+    pub key_file: Option<String>,
+    pub cert_file: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -54,6 +57,8 @@ struct Component {
     pub topic: String,
     pub group: String,
     pub offset: Offset,
+    pub key_file: Option<String>,
+    pub cert_file: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -90,6 +95,8 @@ impl TriggerExecutor for KafkaTrigger {
                 topic: config.topic.clone(),
                 group: config.group.clone(),
                 offset: Offset::from_str(config.offset.as_str()).unwrap_or(Offset::Latest),
+                key_file: config.key_file.clone(),
+                cert_file: config.cert_file.clone(),
             })
             .collect();
         Ok(Self {
@@ -120,24 +127,48 @@ impl KafkaTrigger {
         engine: Arc<TriggerAppEngine<Self>>,
         component: Component,
     ) -> Result<()> {
-        let con = Arc::new(Mutex::new(
-            Consumer::from_hosts(
-                component
-                    .broker_urls
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect(),
-            )
-            .with_topic(component.topic.clone())
-            .with_group(component.group.clone())
-            .with_fallback_offset(match component.offset {
-                Offset::Earliest => FetchOffset::Earliest,
-                Offset::Latest => FetchOffset::Latest,
-            })
-            .with_offset_storage(GroupOffsetStorage::Kafka)
-            .create()
-            .unwrap(),
-        ));
+        let connector = if let Some(key) = component.key_file.clone() {
+            if let Some(cert) = component.cert_file.clone() {
+                let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+                builder.set_cipher_list("DEFAULT").unwrap();
+                builder
+                    .set_certificate_file(cert, SslFiletype::PEM)
+                    .unwrap();
+                builder.set_private_key_file(key, SslFiletype::PEM).unwrap();
+                builder.check_private_key().unwrap();
+                builder.set_default_verify_paths().unwrap();
+                builder.set_verify(SslVerifyMode::PEER);
+                Some(Ok(builder.build()))
+            } else {
+                Some(Err(Error::msg(
+                    "Cert is missing. you must include when passing in a key",
+                )))
+            }
+        } else {
+            None
+        };
+        let con = Consumer::from_hosts(
+            component
+                .broker_urls
+                .split(',')
+                .map(|s| s.to_string())
+                .collect(),
+        )
+        .with_topic(component.topic.clone())
+        .with_group(component.group.clone())
+        .with_fallback_offset(match component.offset {
+            Offset::Earliest => FetchOffset::Earliest,
+            Offset::Latest => FetchOffset::Latest,
+        })
+        .with_offset_storage(GroupOffsetStorage::Kafka);
+
+        let con = if let Some(connector) = connector {
+            con.with_security(SecurityConfig::new(connector?))
+        } else {
+            con
+        };
+
+        let con = Arc::new(Mutex::new(con.create()?));
 
         loop {
             let mss = con.lock().unwrap().poll().unwrap();

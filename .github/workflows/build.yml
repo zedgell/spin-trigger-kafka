@@ -24,17 +24,9 @@ jobs:
       matrix:
         config:
           - { target: "x86_64-unknown-linux-gnu", os: "ubuntu-latest", arch: "amd64", extension: "" }
-          # TODO: the cross-compile to Linux aarch64 fails with a pkg-config error that
-          # I don't yet know how to resolve
-          # - { target: "aarch64-unknown-linux-gnu", os: "ubuntu-latest", arch: "aarch64", extension: "" }
-          # TODO: the cross-compile to Mac fails with a openssl error when default features are enabled on kafka crate that
-          # I don't yet know how to resolve
+          - { target: "aarch64-unknown-linux-gnu", os: "ubuntu-latest", arch: "aarch64", extension: "" }
           - { target: "x86_64-apple-darwin", os: "macos-latest", arch: "amd64", extension: "" }
-          # TODO: the cross-compile to Mac fails with a openssl error when default features are enabled on kafka crate that
-          # I don't yet know how to resolve
           - { target: "aarch64-apple-darwin", os: "macos-latest", arch: "aarch64", extension: "" }
-          # TODO: the cross-compile to Windows fails with a openssl error when default features are on kafka crate enabled that
-          # I don't yet know how to resolve
           - { target: "x86_64-pc-windows-msvc", os: "windows-latest", arch: "amd64", extension: ".exe" }
     steps:
       - uses: actions/checkout@v3
@@ -50,6 +42,9 @@ jobs:
       - name: Install pluginify
         shell: bash
         run: spin plugins install --url https://github.com/itowlson/spin-pluginify/releases/download/canary/pluginify.json --yes
+      - name: Install cross-rs
+        shell: bash
+        run: cargo install cross
       - name: Set up for cross-compiled linux aarch64 build
         if: matrix.config.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -58,7 +53,7 @@ jobs:
           echo '[target.aarch64-unknown-linux-gnu]' >> ${HOME}/.cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> ${HOME}/.cargo/config.toml
       - name: Build plugin binary
-        run: cargo build --release --target ${{ matrix.config.target }}
+        run: cross build --release --target ${{ matrix.config.target }}
       - name: Copy plugin binary to standard location
         shell: bash
         run: cp target/${{ matrix.config.target }}/release/${{ env.PROGRAM_NAME}}${{ matrix.config.extension }} target/release/${{ env.PROGRAM_NAME}}${{ matrix.config.extension }}
