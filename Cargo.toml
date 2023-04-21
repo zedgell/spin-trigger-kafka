@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 kafka = "0.9.0"
-openssl = "0.10.51"
+openssl = {version="0.10.51", features=["vendored"]}
 spin-core = { git = "https://github.com/fermyon/spin", tag = "v0.10.0" }
 spin-trigger = { git = "https://github.com/fermyon/spin", tag = "v0.10.0" }
 tokio = { version = "1.11", features = [ "full" ] }
